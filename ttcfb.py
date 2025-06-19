@@ -1,7 +1,6 @@
 import os
 import requests
 import time
-from bs4 import BeautifulSoup
 try:
     from pystyle import Colors, Colorate, Write, Center, Box
 except:
@@ -9,6 +8,7 @@ except:
     from pystyle import Colors, Colorate, Write, Center, Box
 
 CONFIG_FILE = 'ttc_config.txt'
+FACEBOOK_IDS_FILE = 'facebook_ids.txt'
 
 # ====== Lưu và đọc cấu hình ======
 def save_config(token, phpsessid):
@@ -48,50 +48,42 @@ def get_user_config():
             break
     return token, phpsessid
 
-# ====== Lấy danh sách nick Facebook đã cấu hình ======
-FACEBOOK_CONFIG_URL = 'https://tuongtaccheo.com/cauhinh/facebook.php'
-def get_facebook_nicks(phpsessid):
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Cookie": f"PHPSESSID={phpsessid}"
-    }
-    try:
-        resp = requests.get(FACEBOOK_CONFIG_URL, headers=headers)
-        soup = BeautifulSoup(resp.text, 'html.parser')
-        table = soup.find('table')
-        nicks = []
-        if table:
-            rows = table.find_all('tr')
-            for row in rows[1:]:
-                cols = row.find_all('td')
-                if len(cols) >= 2:
-                    fb_id = cols[0].text.strip()
-                    fb_name = cols[1].text.strip()
-                    nicks.append((fb_id, fb_name))
-        return nicks
-    except Exception as e:
-        print(Colors.red + f'Lỗi khi lấy danh sách nick Facebook: {e}')
-        return []
-
-# ====== Chọn nick Facebook ======
-def select_facebook_nick(nicks):
-    if not nicks:
-        print(Colors.red + 'Không tìm thấy nick Facebook nào đã cấu hình!')
-        print(Colors.yellow + 'Vui lòng vào https://tuongtaccheo.com/cauhinh/facebook.php để thêm nick Facebook.')
-        input('Nhấn Enter để thoát...')
-        exit(1)
-    print(Colors.yellow + 'Danh sách nick Facebook đã cấu hình:')
-    for idx, (fb_id, fb_name) in enumerate(nicks, 1):
-        print(f'{Colors.green}{idx}. {Colors.cyan}{fb_name} {Colors.light_gray}(ID: {fb_id})')
-    while True:
-        try:
-            chon = int(Write.Input('Chọn số thứ tự nick Facebook muốn chạy:', Colors.green_to_yellow, interval=0.0025))
-            if 1 <= chon <= len(nicks):
-                return nicks[chon-1][0], nicks[chon-1][1]
-            else:
+# ====== Chọn nick Facebook từ file ======
+def select_facebook_id():
+    ids = []
+    if os.path.exists(FACEBOOK_IDS_FILE):
+        with open(FACEBOOK_IDS_FILE, 'r') as f:
+            for line in f:
+                if '|' in line:
+                    parts = line.strip().split('|')
+                    ids.append((parts[0], parts[1]))
+                elif line.strip():
+                    ids.append((line.strip(), ''))
+    if ids:
+        print(Colors.yellow + 'Danh sách nick Facebook đã lưu:')
+        for idx, (fb_id, fb_name) in enumerate(ids, 1):
+            print(f'{Colors.green}{idx}. {Colors.cyan}{fb_name} {Colors.light_gray}(ID: {fb_id})')
+        print(f'{Colors.green}{len(ids)+1}. {Colors.red}Nhập nick mới')
+        while True:
+            try:
+                chon = int(Write.Input('Chọn số thứ tự nick Facebook hoặc nhập số mới:', Colors.green_to_yellow, interval=0.0025))
+                if 1 <= chon <= len(ids):
+                    return ids[chon-1][0]
+                elif chon == len(ids)+1:
+                    break
+                else:
+                    print(Colors.red + 'Chỉ chọn số trong danh sách!')
+            except:
                 print(Colors.red + 'Chỉ chọn số trong danh sách!')
-        except:
-            print(Colors.red + 'Chỉ chọn số trong danh sách!')
+    # Nhập nick mới
+    while True:
+        fb_id = Write.Input('Nhập ID Facebook:', Colors.green_to_yellow, interval=0.0025)
+        if fb_id:
+            break
+    fb_name = Write.Input('Nhập tên nick Facebook:', Colors.green_to_yellow, interval=0.0025)
+    with open(FACEBOOK_IDS_FILE, 'a') as f:
+        f.write(f'{fb_id}|{fb_name}\n')
+    return fb_id
 
 # ====== Hỏi delay và số job ======
 def get_delay_and_maxjob():
@@ -166,20 +158,19 @@ def receive_xu(job_id, phpsessid):
 # ====== Main logic ======
 def main():
     banner = r'''
-████████╗████████╗ ██████╗ 
-╚══██╔══╝╚══██╔══╝██╔═══██╗
-   ██║      ██║   ██║   
-   ██║      ██║   ██║   ██║
-   ██║      ██║   ╚██████╔╝
-   ╚═╝      ╚═╝    ╚═════╝ 
-   T  T  C
+TTTTTTT TTTTTTT  CCCCC
+   T       T    C     
+   T       T    C     
+   T       T    C     
+   T       T    C     
+   T       T    C     
+   T       T    CCCCC
 '''
     print(Colorate.Horizontal(Colors.yellow_to_red, Center.XCenter(banner)))
     print(Colors.red + Center.XCenter(Box.DoubleCube("Tool TTC Facebook Auto Nhiệm Vụ")))
     while True:
         token, phpsessid = get_user_config()
-        nicks = get_facebook_nicks(phpsessid)
-        fb_id, fb_name = select_facebook_nick(nicks)
+        fb_id = select_facebook_id()
         delay, max_job, batch = get_delay_and_maxjob()
         dem_tong = 0
         jobs_buffer = []
