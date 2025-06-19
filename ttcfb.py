@@ -1,4 +1,5 @@
 import os
+import sys
 import requests
 import time
 try:
@@ -182,8 +183,14 @@ TTTTTTT TTTTTTT  CCCCC
                 continue
             for job in jobs:
                 print(Colors.cyan + f"Thực hiện nhiệm vụ: {job['idpost']} | {job['link']}")
-                # Ở đây bạn có thể tích hợp thao tác like thật nếu muốn
-                print(Colors.purple + f"(Giả lập) Like bài viết: {job['link']}")
+                # Tự động mở link bài viết Facebook
+                if sys.platform.startswith('linux') and 'ANDROID_ROOT' in os.environ:
+                    os.system(f'am start -a android.intent.action.VIEW -d "{job['link']}"')
+                    print(Colors.purple + f"Đã mở bài viết trên ứng dụng Facebook/Trình duyệt: {job['link']}")
+                else:
+                    import webbrowser
+                    webbrowser.open(job['link'])
+                    print(Colors.purple + f"Đã mở bài viết trên trình duyệt: {job['link']}")
                 time.sleep(2)
                 jobs_buffer.append(job['idpost'])
                 dem_tong += 1
