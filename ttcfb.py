@@ -11,6 +11,22 @@ except:
 CONFIG_FILE = 'ttc_config.txt'
 FACEBOOK_IDS_FILE = 'facebook_ids.txt'
 
+LOGIN_URL = 'https://tuongtaccheo.com/logintoken.php'
+def login_ttc(token):
+    data = {'access_token': token}
+    try:
+        resp = requests.post(LOGIN_URL, data=data)
+        res = resp.json()
+        if res.get('status') == 'success':
+            print(Colors.green + f"Đăng nhập thành công! User: {res['data']['user']} | Số dư: {res['data']['sodu']}")
+            return True
+        else:
+            print(Colors.red + 'Access token không hợp lệ!')
+            return False
+    except Exception as e:
+        print(Colors.red + 'Lỗi khi đăng nhập:', e)
+        return False
+
 # ====== Lưu và đọc cấu hình ======
 def save_config(token, phpsessid):
     with open(CONFIG_FILE, 'w') as f:
@@ -171,6 +187,8 @@ TTTTTTT TTTTTTT  CCCCC
     print(Colors.red + Center.XCenter(Box.DoubleCube("Tool TTC Facebook Auto Nhiệm Vụ")))
     while True:
         token, phpsessid = get_user_config()
+        if not login_ttc(token):
+            continue
         fb_id = select_facebook_id()
         delay, max_job, batch = get_delay_and_maxjob()
         dem_tong = 0
