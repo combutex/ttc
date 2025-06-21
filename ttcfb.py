@@ -29,8 +29,17 @@ def getjob(cookie, nv):
         "user-agent":"Mozilla/5.0 (Linux; Android 10; Mi 9T Pro) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/12.1 Chrome/79.0.3945.136 Mobile Safari/537.36",
         "cookie": cookie
     }
-    get = requests.get(f'https://tuongtaccheo.com/kiemtien/{nv}/getpost.php',headers=headers)
-    return get
+    try:
+        get = requests.get(f'https://tuongtaccheo.com/kiemtien/{nv}/getpost.php',headers=headers, timeout=10)
+        return get
+    except requests.exceptions.Timeout:
+        print("[TIMEOUT] Không nhận được phản hồi từ tuongtaccheo, chờ 10 giây...")
+        sleep(10)
+        return type('obj', (object,), {'text': '[]', 'json': lambda: []})()  # Trả về object giả để không lỗi
+    except requests.exceptions.RequestException as e:
+        print(f"[LỖI] Lỗi khi gửi request: {e}")
+        sleep(10)
+        return type('obj', (object,), {'text': '[]', 'json': lambda: []})()
 
 def decode_base64(encoded_str):
 	decoded_bytes = base64.b64decode(encoded_str)
@@ -94,16 +103,20 @@ def _Infofb(cookie):
         "x-fb-friendly-name": "ProfileCometTimelineListViewRootQuery", 
         "x-fb-lsd": "7_RkODA0fo-6ShZlbFpHEW"
     }
-    get = requests.get("https://www.facebook.com/me", headers=heads, cookies={"cookie": cookie})
     try:
+        get = requests.get("https://www.facebook.com/me", headers=heads, cookies={"cookie": cookie}, timeout=10)
         get = get.url
-        get = requests.get(get, headers=heads, cookies={"cookie": cookie}).text
+        get = requests.get(get, headers=heads, cookies={"cookie": cookie}, timeout=10).text
         _sea = get.split(',"NAME":"')[1].split('",')[0]
         _name = bytes(_sea, "utf-8").decode("unicode_escape")
         _fb1 = get.split('["DTSGInitialData",[],{"token":"')[1].split('"')[0]
         _idfb = cookie.split('c_user=')[1].split(';')[0]
         return [_fb1, _idfb, _name]
-    except:
+    except requests.exceptions.Timeout:
+        print("[TIMEOUT] Không nhận được phản hồi từ Facebook, chờ 10 giây...")
+        sleep(10)
+        return False
+    except Exception:
         return False
     
 def _Like(cookie, uid, type, fb1, idfb):
@@ -165,7 +178,16 @@ def _Like(cookie, uid, type, fb1, idfb):
     cookies = {
         "cookie": cookie
     }
-    _get = requests.post("https://www.facebook.com/api/graphql/",headers=headers, cookies=cookies, params=_data)
+    try:
+        _get = requests.post("https://www.facebook.com/api/graphql/",headers=headers, cookies=cookies, params=_data, timeout=10)
+    except requests.exceptions.Timeout:
+        print("[TIMEOUT] Không nhận được phản hồi từ Facebook (Like), chờ 10 giây...")
+        sleep(10)
+        return False
+    except requests.exceptions.RequestException as e:
+        print(f"[LỖI] Lỗi khi gửi request Like: {e}")
+        sleep(10)
+        return False
     if '{"data":{"feedback_react":{"feedback":{"id":' in _get.text:
         return True
     else:
@@ -235,7 +257,16 @@ def _React_Cmt(cookie, idfb, fb1, uid, type):
     cookies = {
         "cookie": cookie
     }
-    _post = requests.post("https://www.facebook.com/api/graphql/",headers=_headers, cookies=cookies, params=_data)
+    try:
+        _post = requests.post("https://www.facebook.com/api/graphql/",headers=_headers, cookies=cookies, params=_data, timeout=10)
+    except requests.exceptions.Timeout:
+        print("[TIMEOUT] Không nhận được phản hồi từ Facebook (React Cmt), chờ 10 giây...")
+        sleep(10)
+        return False
+    except requests.exceptions.RequestException as e:
+        print(f"[LỖI] Lỗi khi gửi request React Cmt: {e}")
+        sleep(10)
+        return False
     if '{"data":{"feedback_react":{"feedback":' in _post.text:
         return True
     else:
@@ -289,7 +320,16 @@ def _Follow(cookie, idfb, fb1, uid):
     cookies = {
         "cookie": cookie
     }
-    _Post = requests.post("https://www.facebook.com/api/graphql/", headers=headers, cookies=cookies, params=_data)
+    try:
+        _Post = requests.post("https://www.facebook.com/api/graphql/", headers=headers, cookies=cookies, params=_data, timeout=10)
+    except requests.exceptions.Timeout:
+        print("[TIMEOUT] Không nhận được phản hồi từ Facebook (Follow), chờ 10 giây...")
+        sleep(10)
+        return False
+    except requests.exceptions.RequestException as e:
+        print(f"[LỖI] Lỗi khi gửi request Follow: {e}")
+        sleep(10)
+        return False
     if '"subscribe_status":"IS_SUBSCRIBED"' in _Post.text:
         return True
     else:
@@ -344,12 +384,18 @@ def CMT(cookie, id, idfb, fb1, msg:str):
         "cookie": cookie
     }
     try:
-        _get = requests.post("https://www.facebook.com/api/graphql/",headers=headers, cookies=cookies, params=_data)
-        if '"errors"' not in _get.text:
-            return True
-        else:
-            return False
-    except:
+        _get = requests.post("https://www.facebook.com/api/graphql/",headers=headers, cookies=cookies, params=_data, timeout=10)
+    except requests.exceptions.Timeout:
+        print("[TIMEOUT] Không nhận được phản hồi từ Facebook (CMT), chờ 10 giây...")
+        sleep(10)
+        return False
+    except requests.exceptions.RequestException as e:
+        print(f"[LỖI] Lỗi khi gửi request CMT: {e}")
+        sleep(10)
+        return False
+    if '"errors"' not in _get.text:
+        return True
+    else:
         return False
     
 def _Page(cookie, idfb, fb1, id):
@@ -404,7 +450,16 @@ def _Page(cookie, idfb, fb1, id):
     cookies = {
         "cookie": cookie
     }
-    _Post = requests.post("https://www.facebook.com/api/graphql/", headers=headers, cookies=cookies, params=_data)
+    try:
+        _Post = requests.post("https://www.facebook.com/api/graphql/", headers=headers, cookies=cookies, params=_data, timeout=10)
+    except requests.exceptions.Timeout:
+        print("[TIMEOUT] Không nhận được phản hồi từ Facebook (Like Page), chờ 10 giây...")
+        sleep(10)
+        return False
+    except requests.exceptions.RequestException as e:
+        print(f"[LỖI] Lỗi khi gửi request Like Page: {e}")
+        sleep(10)
+        return False
     if '"subscribe_status":"IS_SUBSCRIBED"' in _Post.text:
         return True
     else:
@@ -460,7 +515,16 @@ def _Share(cookie, idfb, fb1, uid):
     cookies = {
         "cookie": cookie
     }
-    _post = requests.post("https://www.facebook.com/api/graphql/",headers=headers, cookies=cookies, params=_data)
+    try:
+        _post = requests.post("https://www.facebook.com/api/graphql/",headers=headers, cookies=cookies, params=_data, timeout=10)
+    except requests.exceptions.Timeout:
+        print("[TIMEOUT] Không nhận được phản hồi từ Facebook (Share), chờ 10 giây...")
+        sleep(10)
+        return False
+    except requests.exceptions.RequestException as e:
+        print(f"[LỖI] Lỗi khi gửi request Share: {e}")
+        sleep(10)
+        return False
     if '"errors"' not in _post.text:
         return True
     else:
@@ -513,7 +577,16 @@ def _Bypass(cookie, idfb, fb1):
     cookies = {
         "cookie": cookie
     }
-    bypass = requests.post('https://www.facebook.com/api/graphql/',headers=headers, cookies=cookies, params=data)
+    try:
+        bypass = requests.post('https://www.facebook.com/api/graphql/',headers=headers, cookies=cookies, params=data, timeout=10)
+    except requests.exceptions.Timeout:
+        print("[TIMEOUT] Không nhận được phản hồi từ Facebook (Bypass), chờ 10 giây...")
+        sleep(10)
+        return ''
+    except requests.exceptions.RequestException as e:
+        print(f"[LỖI] Lỗi khi gửi request Bypass: {e}")
+        sleep(10)
+        return ''
     return bypass.text
 
 def Nhap_Cookie():
@@ -616,6 +689,13 @@ def Main():
         if len(listck) == 0:
             print(f'{red}Đã Xoá Tất Cả Cookie, Vui Lòng Nhập Lại')
             listck = Nhap_Cookie()
+            with open('Cookie_FB.txt', 'w') as f:
+                json.dump(listck, f)
+        # Kiểm tra nếu số lượng cookie còn lại <= 3 thì yêu cầu nhập thêm cookie mới
+        while len(listck) <= 3:
+            print(f'{red}Chỉ còn {len(listck)} cookie Facebook! Vui lòng nhập thêm cookie mới để tránh checkpoint và tăng tốc độ cày xu.')
+            them_ck = Nhap_Cookie()
+            listck.extend(them_ck)
             with open('Cookie_FB.txt', 'w') as f:
                 json.dump(listck, f)
         for ck in listck:
